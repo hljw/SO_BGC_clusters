@@ -112,3 +112,5 @@ data_so-chic/
 
 # Ignore saved profiles
 *.nc
+
+data/01_raw/
