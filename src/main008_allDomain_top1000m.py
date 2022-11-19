@@ -163,6 +163,7 @@ if transform_method=='pca':
     # plot PCA structure
     #pt.plot_pca_vertical_structure(ploc, profiles, pca, Xtrans)
     pt.plot_pca3D(ploc, colormap, profiles, Xtrans, frac=0.33)
+    #^ this function is slow, can comment out unless I want the 3D PCA structure
 
     # pairplot of transformed variables
     pt.plot_pairs(ploc, Xtrans, kind='hist', descr=transform_method)
@@ -220,6 +221,7 @@ tSNE_data, labels_for_tSNE = lp.fit_and_apply_tsne(profiles, Xtrans)
 
 # plot t-SNE with class labels
 pt.plot_tsne(ploc, colormap, tSNE_data, labels_for_tSNE)
+# this plots a high-D dataset in 2D, can comment out or try it
 
 #####################################################################
 # Plot classification results (vertical structures)
@@ -265,6 +267,7 @@ pt.plot_pca3D(ploc, colormap, dfp, Xtrans, frac=0.33, withLabels=True)
 pt.plot_TS_single_lev(ploc, dfp, n_components_selected, colormap,
                       descrip='', plev=0, PTrange=Trange,
                       SPrange=Srange, lon = -20, lat = -65, rr = 0.60)
+# shade TS diagrams with nitrate in color
 
 # plot multiple-level T-S diagrams
 pt.plot_TS_multi_lev(ploc, dfp, n_components_selected, colormap,

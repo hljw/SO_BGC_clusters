@@ -788,9 +788,9 @@ def plot_aic_scores(ploc, max_N, aic_mean, aic_std):
     plt.close()
 
 #####################################################################
-# Sample profile plots for T, S, CT, SA, and sig0
+# Sample profile plots for T, S, CT, SA, and sig0 -- SUBSET
 #####################################################################
-def prof_TS_sample_plots(ploc, profiles):
+def prof_TS_sample_plots_subset(ploc, profiles):
 
     # start message
     print('plot_tools.plot_TS_sample_plots')
@@ -802,6 +802,7 @@ def prof_TS_sample_plots(ploc, profiles):
 
     # plotting subset (just a few for visualisation purposes)
     subset = range(1000,2000,1)
+        
     # temperature plots
     fig, ax = plt.subplots(figsize=(15,10))
     profiles.prof_T[subset].plot(y='depth', yincrease=False)
@@ -864,6 +865,83 @@ def prof_TS_sample_plots(ploc, profiles):
     plt.show()
     plt.close()
 
+    
+    
+#####################################################################
+# Sample profile plots for T, S, CT, SA, and sig0 -- NO SUBSET
+#####################################################################
+def prof_TS_sample_plots(ploc, profiles):
+
+    # start message
+    print('plot_tools.plot_TS_sample_plots')
+
+    # subdirectory
+    dploc = ploc + 'sample_plot_and_hist/'
+    if not os.path.exists(dploc):
+        os.makedirs(dploc)
+        
+    # temperature plots
+    fig, ax = plt.subplots(figsize=(15,10))
+    profiles.prof_T.plot(y='pressure_interp', yincrease=False)
+    plt.savefig(dploc + 'prof_T.png', bbox_inches='tight')
+    plt.savefig(dploc + 'prof_T.pdf', bbox_inches='tight')
+    plt.show()
+    plt.close()
+    # salinity plots
+    fig, ax = plt.subplots(figsize=(15,10))
+    profiles.prof_S.plot(y='pressure_interp', yincrease=False)
+    plt.savefig(dploc + 'prof_S.png', bbox_inches='tight')
+    plt.savefig(dploc + 'prof_S.pdf', bbox_inches='tight')
+    plt.show()
+    plt.close()
+    # conservative temperature plots
+    fig, ax = plt.subplots(figsize=(15,10))
+    profiles.prof_CT.plot(y='pressure_interp', yincrease=False)
+    plt.savefig(dploc + 'prof_CT.png', bbox_inches='tight')
+    plt.savefig(dploc + 'prof_CT.pdf', bbox_inches='tight')
+    plt.show()
+    plt.close()
+    # absolute salinity plots
+    fig, ax = plt.subplots(figsize=(15,10))
+    profiles.prof_SA.plot(y='pressure_interp', yincrease=False)
+    plt.savefig(dploc + 'prof_SA.png', bbox_inches='tight')
+    plt.savefig(dploc + 'prof_SA.pdf', bbox_inches='tight')
+    plt.show()
+    plt.close()
+    # sigma0 density
+    fig, ax = plt.subplots(figsize=(15,10))
+    profiles.sig0.plot(y='pressure_interp', yincrease=False)
+    plt.savefig(dploc + 'sig0.png', bbox_inches='tight')
+    plt.savefig(dploc + 'sig0.pdf', bbox_inches='tight')
+    plt.show()
+    plt.close()
+    # histograms
+    xr.plot.hist(profiles.prof_T,figsize=(15,10))
+    plt.savefig(dploc + 'hist_prof_T.png', bbox_inches='tight')
+    plt.savefig(dploc + 'hist_prof_T.pdf', bbox_inches='tight')
+    plt.show()
+    plt.close()
+    xr.plot.hist(profiles.prof_S,figsize=(15,10))
+    plt.savefig(dploc + 'hist_prof_S.png', bbox_inches='tight')
+    plt.savefig(dploc + 'hist_prof_S.pdf', bbox_inches='tight')
+    plt.show()
+    plt.close()
+    xr.plot.hist(profiles.prof_CT,figsize=(15,10))
+    plt.savefig(dploc + 'hist_prof_CT.png', bbox_inches='tight')
+    plt.savefig(dploc + 'hist_prof_CT.pdf', bbox_inches='tight')
+    plt.show()
+    plt.close()
+    xr.plot.hist(profiles.prof_SA,figsize=(15,10))
+    plt.savefig(dploc + 'hist_prof_SA.png', bbox_inches='tight')
+    plt.savefig(dploc + 'hist_prof_SA.pdf', bbox_inches='tight')
+    plt.show()
+    plt.close()
+    xr.plot.hist(profiles.sig0,figsize=(15,10))
+    plt.savefig(dploc + 'hist_sig0.png', bbox_inches='tight')
+    plt.savefig(dploc + 'hist_sig0.pdf', bbox_inches='tight')
+    plt.show()
+    plt.close()
+    
 #####################################################################
 # Plot PCA structure for temperature and salinity
 #####################################################################

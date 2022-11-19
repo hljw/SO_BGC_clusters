@@ -17,49 +17,56 @@ import random
 # Load the profile data (combined CTD, float, and seal data)
 #####################################################################
 def load_profile_data(data_location, lon_min, lon_max,
-                      lat_min, lat_max, zmin, zmax, zscale=False):
+                      lat_min, lat_max, zmin, zmax, 
+                      data_in_one_file=True, is_data_already_organized = True, zscale=False):
 
     # start message
     print('load_and_preprocess.load_profile_data')
+    
+    if data_in_one_file == True:
+        profiles = xr.open_dataset(data_location)
+    
+    if data_in_one_file == False: 
+        # load the ctds, floats, and seals
+        ctds = xr.open_mfdataset(data_location + 'CTD/*.nc',
+                                 concat_dim='iPROF', combine='nested')
+        floats = xr.open_mfdataset(data_location + 'FLOATS/*.nc',
+                                   concat_dim='iPROF', combine='nested')
+        seals = xr.open_mfdataset(data_location + 'SEALS/*.nc',
+                                  concat_dim='iPROF', combine='nested')
 
-    # load the ctds, floats, and seals
-    ctds = xr.open_mfdataset(data_location + 'CTD/*.nc',
-                             concat_dim='iPROF', combine='nested')
-    floats = xr.open_mfdataset(data_location + 'FLOATS/*.nc',
-                               concat_dim='iPROF', combine='nested')
-    seals = xr.open_mfdataset(data_location + 'SEALS/*.nc',
-                              concat_dim='iPROF', combine='nested')
+        # add variable to indicate data source
+        ctds[  'source'] = 'ctd'
+        floats['source'] = 'argo'
+        seals[ 'source'] = 'seal'
 
-    # add variable to indicate data source
-    ctds['source'] = 'ctd'
-    floats['source'] = 'argo'
-    seals['source'] = 'seal'
+        # combine into single xarray.Dataset object
+        profiles = xr.combine_nested([ctds, floats, seals],
+                                     concat_dim='iPROF')
+        
+    if is_data_already_organized == False:
 
-    # combine into single xarray.Dataset object
-    profiles = xr.combine_nested([ctds, floats, seals],
-                                 concat_dim='iPROF')
+        # assign depth coordinate
+        profiles.coords['iDEPTH'] = profiles.prof_depth[0,:].values
 
-    # assign depth coordinate
-    profiles.coords['iDEPTH'] = profiles.prof_depth[0,:].values
+        # select subset of data between 0-1000 dbar
+        profiles = profiles.sel(iDEPTH=slice(zmin,zmax))
 
-    # select subset of data between 0-1000 dbar
-    profiles = profiles.sel(iDEPTH=slice(zmin,zmax))
+        # rename some of the variables
+        profiles = profiles.rename({'iDEPTH':'depth',
+                                    'iPROF':'profile',
+                                    'prof_lon':'lon',
+                                    'prof_lat':'lat'})
 
-    # rename some of the variables
-    profiles = profiles.rename({'iDEPTH':'depth',
-                                'iPROF':'profile',
-                                'prof_lon':'lon',
-                                'prof_lat':'lat'})
+        # drop the "prof_depth" variable, because it's redundant
+        profiles = profiles.drop_vars({'prof_depth'})
 
-    # drop the "prof_depth" variable, because it's redundant
-    profiles = profiles.drop_vars({'prof_depth'})
+        # change lon and lat to coordinates
+        profiles = profiles.set_coords({'lon','lat'})
 
-    # change lon and lat to coordinates
-    profiles = profiles.set_coords({'lon','lat'})
-
-    # only keep a subset of the data variables, as we don't need them all
-    profiles = profiles.get(['prof_date','prof_YYYYMMDD','prof_HHMMSS',
-                             'prof_T','prof_S','source'])
+        # only keep a subset of the data variables, as we don't need them all
+        profiles = profiles.get(['prof_date','prof_YYYYMMDD','prof_HHMMSS',
+                                 'prof_T','prof_S','source'])
 
     # either use the z-scaling (no discarded profiles) or use geometric bounds
     # for discarding profiles
@@ -74,6 +81,7 @@ def load_profile_data(data_location, lon_min, lon_max,
         # drop any remaining profiles with NaN values
         # the profiles with NaN values don't have measurements in selected depth range
         profiles = profiles.dropna('profile')
+        # !!! This is where profiles with NaN are dropped -- if too many, maybe interpolate for NaN values
 
     # start message
     print('----> profiles loaded')
@@ -232,7 +240,7 @@ def z1Dinterp(x):
 #####################################################################
 # Handle date and time data
 #####################################################################
-def preprocess_time_and_date(profiles):
+def preprocess_time_and_date(profiles, add_season=True):
 
     # start message
     print('load_and_preprocess.preprocess_time_and_date')
@@ -242,15 +250,19 @@ def preprocess_time_and_date(profiles):
     #ntime_array_hms = profiles.prof_HHMMSS.values
 
     # select size
-    nsize = ntime_array_ymd.size
+    # nsize = ntime_array_ymd.size
+    nsize = len(profiles.prof_YYYYMMDD.values)
 
     # create array of zeros
-    time =  np.zeros((nsize,), dtype='datetime64[s]')
-    month = np.zeros((nsize,), dtype='int')
-    year =  np.zeros((nsize,), dtype='int')
+    time   = np.zeros((nsize,), dtype='datetime64[s]')
+    month  = np.zeros((nsize,), dtype='int')
+    year   = np.zeros((nsize,), dtype='int')
     season = np.zeros((nsize,), dtype='int')
 
-    # loop over all values, convert do datetime64[s]
+
+    # loop over all values, convert to datetime64[s]
+    # note, here Hannah changed the nsize and the indices that correspond to year, month, day.
+    # there is probably a better, less-hard-coded way to do this
     for i in range(nsize):
         # extract strings for ymd and hms
         s_ymd = str(ntime_array_ymd[i]).zfill(8)
@@ -262,18 +274,18 @@ def preprocess_time_and_date(profiles):
         #if s_hms=='240000.0':
         #    s_hms = '235959.0'
         # format into yyyy-mm-dd hh:mm:ss
-        date_str_ymd = s_ymd[0:4] + '-' + s_ymd[4:6] + '-' + s_ymd[6:8]
+        date_str_ymd = s_ymd[2:6] + '-' + s_ymd[6:8] + '-' + s_ymd[8:10]
         date_str_hms = s_hms[0:2] + ':' + s_hms[2:4] + ':' + s_hms[4:6]
         date_str =  date_str_ymd + ' ' + date_str_hms
         # convert to datetime64 (the 's' stands for seconds)
         time[i] = np.datetime64(date_str,'s')
         # grab the year and month, put them into place (integers)
-        year[i] = int(s_ymd[0:4])
-        month[i] = int(s_ymd[4:6])
+        year[i] = int(s_ymd[2:6])
+        month[i] = int(s_ymd[6:8])
 
     # convert to pandas datetime (may not may not end up using this)
     #time_pd = pd.to_datetime(time)
-    
+
     # assign season based on the month (1=DJF, 2=MAM, 3=JJA, 4=SON)
     for i in range(nsize):
         if (month[i]==12 or month[i]==1 or month[i]==2):
@@ -335,8 +347,8 @@ def regrid_onto_more_vertical_levels(profiles, zmin, zmax, zlevs=50):
                                    method='linear')
 
     # rename dimension to avoid conflict with existing dimension
-    profiles['ct_on_highz'] = ct_on_highz.rename({'depth':'depth_highz'})
-    profiles['sa_on_highz'] = sa_on_highz.rename({'depth':'depth_highz'})
+    profiles['ct_on_highz']   =   ct_on_highz.rename({'depth':'depth_highz'})
+    profiles['sa_on_highz']   =   sa_on_highz.rename({'depth':'depth_highz'})
     profiles['sig0_on_highz'] = sig0_on_highz.rename({'depth':'depth_highz'})
 
     # drop any levels where the interpolation failed
